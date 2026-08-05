@@ -49,15 +49,18 @@ function findAsar() {
   throw new Error('未找到 Cherry Studio app.asar，请设置 CHERRY_STUDIO_APP 指向 .app 目录')
 }
 
-/** 用 @electron/asar 提取整个包到指定目录，返回 main.js 路径 */
+/** 从 app.asar 取出 out/main/main.js（只抽单文件，不依赖 app.asar.unpacked） */
 export function extractMainJsFromAsar(asarPath, outDir) {
-  const mainJs = path.join(outDir, 'content', 'out', 'main', 'main.js')
+  const mainRel = path.join('out', 'main', 'main.js')
+  const mainJs = path.join(outDir, 'content', mainRel)
   if (fs.existsSync(mainJs)) return mainJs
 
-  fs.mkdirSync(outDir, { recursive: true })
+  const destDir = path.dirname(mainJs)
+  fs.mkdirSync(destDir, { recursive: true })
+  // extract-file 把文件写到 cwd，文件名为 basename
   const out = spawnSync(
-    'npx', ['--yes', '@electron/asar', 'extract', asarPath, path.join(outDir, 'content')],
-    { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8', timeout: 180000 },
+    'npx', ['--yes', '@electron/asar', 'extract-file', asarPath, mainRel.replace(/\\/g, '/')],
+    { cwd: destDir, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8', timeout: 180000 },
   )
   if (out.status !== 0) {
     throw new Error(`asar 提取失败: ${out.stderr || out.stdout}`)

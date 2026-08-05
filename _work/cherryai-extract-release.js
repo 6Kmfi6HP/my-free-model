@@ -9,7 +9,7 @@
  * 支持的资产格式与解包方式：
  *   .zip    → unzip                     （macOS / 便携版）
  *   .dmg    → hdiutil attach + ditto    （macOS）
- *   .exe    → 7z（p7zip / npx 7zip-bin）（Windows NSIS）
+ *   .exe    → 7z + 嵌套 app-*.7z（Windows NSIS / portable）
  *   .AppImage → --appimage-extract      （Linux）
  *   .deb    → dpkg-deb -x 或 ar+tar     （Linux）
  *
@@ -125,6 +125,14 @@ function pickAsset(meta, { platform, assetName }) {
 
 /* ---------- 下载 ---------- */
 async function download(url, dest) {
+  // 本地路径 / file://：直接拷贝（便于调试，避免重复下载大包）
+  if (url.startsWith('file://') || (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url) && fs.existsSync(url))) {
+    const src = url.startsWith('file://') ? fileURLToPath(url) : url
+    log(`拷贝本地文件 ${src}`)
+    fs.copyFileSync(src, dest)
+    log(`已拷贝 ${(fs.statSync(dest).size / 1048576).toFixed(1)} MiB → ${dest}`)
+    return
+  }
   log(`下载 ${url}`)
   const res = await fetch(url, { redirect: 'follow' })
   if (!res.ok) throw new Error(`下载失败 HTTP ${res.status}: ${await res.text()}`)
@@ -173,10 +181,32 @@ function find7z() {
   return r.stdout.trim()
 }
 
+/** 收集目录内 electron-builder NSIS 嵌套包 app-64.7z / app-32.7z */
+function findNestedApp7z(dir, depth = 0, out = []) {
+  if (depth > 4) return out
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, entry.name)
+    if (entry.isDirectory()) findNestedApp7z(p, depth + 1, out)
+    else if (/^app-\d+\.7z$/i.test(entry.name) || /^app\.7z$/i.test(entry.name)) out.push(p)
+  }
+  return out
+}
+
 function extractExe(file, dir) {
   const z = find7z()
   fs.mkdirSync(dir, { recursive: true })
+  // NSIS 外壳：通常只有 $PLUGINSDIR/app-64.7z
   sh(z, ['x', '-y', `-o${dir}`, file])
+  const nested = findNestedApp7z(dir)
+  for (const archive of nested) {
+    log(`解嵌套包: ${path.basename(archive)}`)
+    // 优先只抽 resources/app.asar（体积小、快）；失败再全量解
+    const partial = spawnSync(z, ['x', '-y', `-o${dir}`, archive, 'resources/app.asar'],
+      { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' })
+    if (partial.status !== 0 || !findAsar(dir)) {
+      sh(z, ['x', '-y', `-o${dir}`, archive])
+    }
+  }
 }
 
 function extractAppImage(file, dir) {
@@ -245,7 +275,10 @@ async function main() {
     log(`直接使用 URL: ${downloadUrl}`)
   }
 
-  const fileName = path.basename(new URL(downloadUrl).pathname) || 'pkg.bin'
+  const fileName = (() => {
+    try { return path.basename(new URL(downloadUrl).pathname) || 'pkg.bin' }
+    catch { return path.basename(downloadUrl) || 'pkg.bin' }
+  })()
   const filePath = path.join(work, fileName)
   await download(downloadUrl, filePath)
 

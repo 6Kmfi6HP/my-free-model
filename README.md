@@ -1,4 +1,4 @@
-# cherry-free-model
+# free-model
 
 从 Cherry Studio 官方 Release 自动提取 CherryAI 免费模型 HMAC 签名密钥。
 

@@ -89,7 +89,7 @@ node cherryai-extract-release.js --keep                 # 保留临时下载/解
 |------|------|------|
 | `.zip` | `unzip` | macOS 便携 / 通用 |
 | `.dmg` | `hdiutil attach` + `ditto` | macOS（仅 macOS 本机） |
-| `.exe` | `7z`（p7zip 或 `npx 7zip-bin`） | Windows NSIS |
+| `.exe` | `7z` + 解嵌套 `app-*.7z` | Windows NSIS / portable |
 | `.AppImage` | `--appimage-extract` | Linux |
 | `.deb` | `dpkg-deb -x` 或 `ar`+`tar` 兜底 | Linux |
 
