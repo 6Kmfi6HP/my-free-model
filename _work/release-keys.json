@@ -1,0 +1,9 @@
+{
+  "prefix": "K3RNPFx19hPh1AHr5E1wBEFfi4uYUjoCFuzjDzvS9cAWD8KuKJR8FOClwUpGqRRX",
+  "suffix": ".GvI6I5ZrEHcGOWjO5AKhJKGmnwwGfM62XKpWqkjhvzRU2NZIinM77aTGIqhqys0g",
+  "fullSecret": "K3RNPFx19hPh1AHr5E1wBEFfi4uYUjoCFuzjDzvS9cAWD8KuKJR8FOClwUpGqRRX.GvI6I5ZrEHcGOWjO5AKhJKGmnwwGfM62XKpWqkjhvzRU2NZIinM77aTGIqhqys0g",
+  "clientId": "cherry-studio",
+  "baseUrl": "https://api.cherry-ai.com",
+  "tag": "latest",
+  "platform": "darwin"
+}

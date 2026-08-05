@@ -1,0 +1,85 @@
+name: Extract CherryAI Keys
+
+on:
+  # 定时拉取 Cherry Studio 最新 Release 并刷新密钥
+  schedule:
+    - cron: '0 */12 * * *' # 每 12 小时
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag（留空 = latest，例如 v2.0.0）'
+        required: false
+        type: string
+      platform:
+        description: '安装包平台（密钥跨平台通常一致，CI 默认 win32 以便 7z 解包）'
+        required: false
+        type: choice
+        options:
+          - win32
+          - linux
+          - darwin
+        default: win32
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extract-cherryai-keys
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install unpack tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full unzip
+
+      - name: Extract keys from Cherry Studio release
+        id: extract
+        working-directory: _work
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PLATFORM: ${{ github.event_name == 'workflow_dispatch' && inputs.platform || 'win32' }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || '' }}
+        run: |
+          set -euo pipefail
+          ARGS=(--platform "$PLATFORM")
+          if [ -n "$TAG" ]; then
+            ARGS+=(--tag "$TAG")
+          fi
+          echo "Running: node cherryai-extract-release.js ${ARGS[*]}"
+          node cherryai-extract-release.js "${ARGS[@]}"
+
+      - name: Commit release-keys.json if changed
+        run: |
+          set -euo pipefail
+          KEYS=_work/release-keys.json
+          if [ ! -f "$KEYS" ]; then
+            echo "release-keys.json missing" >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet -- "$KEYS"; then
+            echo "No key changes; skip commit."
+            exit 0
+          fi
+
+          TAG=$(node -p "JSON.parse(require('fs').readFileSync('_work/release-keys.json','utf8')).tag")
+          ASSET=$(node -p "JSON.parse(require('fs').readFileSync('_work/release-keys.json','utf8')).asset")
+          git add "$KEYS"
+          git commit -m "chore: update CherryAI keys from ${TAG} (${ASSET})"
+          git push

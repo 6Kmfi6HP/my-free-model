@@ -1,0 +1,7 @@
+# local asar extract leftovers
+_work/extracted-main/
+_work/**/node_modules/
+
+# OS / editor
+.DS_Store
+*.log
