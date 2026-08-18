@@ -4,7 +4,7 @@
   "fullSecret": "K3RNPFx19hPh1AHr5E1wBEFfi4uYUjoCFuzjDzvS9cAWD8KuKJR8FOClwUpGqRRX.GvI6I5ZrEHcGOWjO5AKhJKGmnwwGfM62XKpWqkjhvzRU2NZIinM77aTGIqhqys0g",
   "clientId": "cherry-studio",
   "baseUrl": "https://api.cherry-ai.com",
-  "tag": "v2.0.5",
+  "tag": "v2.0.7",
   "platform": "win32",
-  "asset": "Cherry-Studio-2.0.5-x64-portable.exe"
+  "asset": "Cherry-Studio-2.0.7-x64-portable.exe"
 }
